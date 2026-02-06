@@ -39,7 +39,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "  WSL: OK" -ForegroundColor Green
 
 # Check for a distro (default Ubuntu)
-$distros = wsl.exe --list --quiet 2>&1
+# Note: wsl.exe outputs UTF-16LE with null bytes; strip them for reliable matching
+$distros = (wsl.exe --list --quiet 2>&1) -replace "`0", ""
 $defaultDistro = "Ubuntu"
 if ($distros -notmatch "Ubuntu") {
     $available = ($distros -split "`n" | Where-Object { $_.Trim() }) -join ", "
@@ -225,6 +226,18 @@ if (Test-Path $configFile) {
 Write-Host ""
 Write-Host "[6/10] Installing startup files..." -ForegroundColor Yellow
 
+# Backup existing scripts before overwriting
+$backupDir = "$installDir\backup"
+$existingScripts = @("start-wsl.bat", "start-wsl-hidden.vbs", "wsl-health-monitor.ps1")
+$hasExisting = $existingScripts | Where-Object { Test-Path (Join-Path $startupDir $_) }
+if ($hasExisting) {
+    if (-not (Test-Path $backupDir)) { New-Item -Path $backupDir -ItemType Directory -Force | Out-Null }
+    foreach ($f in $hasExisting) {
+        Copy-Item (Join-Path $startupDir $f) (Join-Path $backupDir $f) -Force
+    }
+    Write-Host "  Backed up existing scripts to $backupDir" -ForegroundColor Gray
+}
+
 Copy-Item "$scriptRoot\src\start-wsl.bat" "$startupDir\start-wsl.bat" -Force
 Copy-Item "$scriptRoot\src\start-wsl-hidden.vbs" "$startupDir\start-wsl-hidden.vbs" -Force
 Copy-Item "$scriptRoot\src\wsl-health-monitor.ps1" "$startupDir\wsl-health-monitor.ps1" -Force
@@ -275,6 +288,13 @@ foreach ($proto in $protocols) {
     Write-Host "  Registered: $($proto.Name)://" -ForegroundColor Green
 }
 
+# Clean up legacy action scripts directory if it exists
+$legacyActions = "$env:USERPROFILE\.openclaw-actions"
+if (Test-Path $legacyActions) {
+    Remove-Item $legacyActions -Recurse -Force
+    Write-Host "  Cleaned up legacy actions dir: $legacyActions" -ForegroundColor Gray
+}
+
 # --- Step 9: Install BurntToast ---
 
 Write-Host ""
@@ -302,6 +322,16 @@ if (-not $SkipBurntToast) {
 
 Write-Host ""
 Write-Host "[10/10] Starting OpenClaw monitor..." -ForegroundColor Yellow
+
+# Kill any running health monitor before starting fresh
+Get-Process powershell, pwsh -ErrorAction SilentlyContinue | Where-Object {
+    try {
+        (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine -match "wsl-health-monitor"
+    } catch { $false }
+} | ForEach-Object {
+    Write-Host "  Stopping old health monitor (PID $($_.Id))..." -ForegroundColor Yellow
+    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+}
 
 # Start the VBS launcher (starts WSL keep-alive + tray monitor)
 Start-Process wscript.exe -ArgumentList "//nologo `"$startupDir\start-wsl-hidden.vbs`""
