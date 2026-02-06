@@ -6,7 +6,7 @@ param(
     [switch]$Restore
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 $installDir = "$env:USERPROFILE\.openclaw-windows"
 $configFile = "$installDir\config.json"
@@ -37,7 +37,7 @@ if (-not $ghPath) {
 Write-Host "  gh CLI: OK" -ForegroundColor Green
 
 # Check gh auth
-$authStatus = gh auth status 2>&1
+gh auth status 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ERROR: GitHub CLI is not authenticated." -ForegroundColor Red
     Write-Host "  Run: gh auth login" -ForegroundColor Gray
@@ -46,13 +46,13 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "  gh auth: OK" -ForegroundColor Green
 
 # Get GitHub username
-$ghUser = gh api user --jq ".login" 2>&1
+$ghUser = (gh api user --jq ".login" 2>&1) | Out-String
+$ghUser = $ghUser.Trim()
 if ($LASTEXITCODE -ne 0 -or -not $ghUser) {
     Write-Host "  ERROR: Could not determine GitHub username." -ForegroundColor Red
     Write-Host "  Run: gh auth login" -ForegroundColor Gray
     exit 1
 }
-$ghUser = $ghUser.Trim()
 Write-Host "  GitHub user: $ghUser" -ForegroundColor Green
 
 $fullRepoName = "$ghUser/$repoName"
@@ -162,7 +162,7 @@ if ($Restore) {
         Write-Host "  Cloning $fullRepoName..." -ForegroundColor Gray
         gh repo clone $fullRepoName $syncDir -- --quiet 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            # New empty repo — initialize locally
+            # New empty repo - initialize locally
             New-Item -Path $syncDir -ItemType Directory -Force | Out-Null
             git -C $syncDir init --quiet 2>&1 | Out-Null
             git -C $syncDir remote add origin "https://github.com/$fullRepoName.git" 2>&1 | Out-Null
@@ -181,37 +181,33 @@ if ($Restore) {
     # Create .gitignore if missing
     $gitignorePath = "$syncDir\.gitignore"
     if (-not (Test-Path $gitignorePath)) {
-        @"
-# Sensitive — never back up
-openclaw.json
-*.log
-sessions/
-"@ | Set-Content $gitignorePath
+        "# Sensitive - never back up", "openclaw.json", "*.log", "sessions/" | Set-Content $gitignorePath
         Write-Host "  Created .gitignore" -ForegroundColor Gray
     }
 
     # Create README if missing
     $readmePath = "$syncDir\README.md"
     if (-not (Test-Path $readmePath)) {
-        @"
-# openclaw-config
-
-Private backup of OpenClaw Windows configuration.
-
-Managed automatically by ``backup.ps1`` in [openclaw-windows](https://github.com/mikepsinn/openclaw-windows).
-"@ | Set-Content $readmePath
+        "# openclaw-config", "", "Private backup of OpenClaw Windows configuration.", "", "Managed automatically by ``backup.ps1`` in [openclaw-windows](https://github.com/mikepsinn/openclaw-windows)." | Set-Content $readmePath
         Write-Host "  Created README.md" -ForegroundColor Gray
+    }
+
+    # Remove stale lock file if present (left behind if script was interrupted)
+    $lockFile = "$syncDir\.git\index.lock"
+    if (Test-Path $lockFile) {
+        Remove-Item $lockFile -Force
     }
 
     # Check for changes
     git -C $syncDir add -A 2>&1 | Out-Null
-    $status = git -C $syncDir status --porcelain 2>&1
+    $status = (git -C $syncDir status --porcelain 2>&1) | Out-String
+    $status = $status.Trim()
     if (-not $status) {
         Write-Host "  Config unchanged, nothing to push." -ForegroundColor Gray
     } else {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        git -C $syncDir commit -m "Backup config.json — $timestamp" --quiet 2>&1 | Out-Null
-        git -C $syncDir push --quiet 2>&1
+        git -C $syncDir commit -m "Backup config.json - $timestamp" --quiet 2>&1 | Out-Null
+        git -C $syncDir push --quiet 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             # First push to empty repo may need branch setup
             git -C $syncDir push -u origin HEAD --quiet 2>&1 | Out-Null
