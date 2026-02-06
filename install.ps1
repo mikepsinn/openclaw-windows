@@ -355,6 +355,7 @@ Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. The tray icon should appear shortly (gray -> green when healthy)"
 Write-Host "  2. Edit $configFile to customize settings"
 Write-Host "  3. The monitor auto-starts on login via the Startup folder"
+Write-Host "  4. Back up config: powershell -ExecutionPolicy Bypass -File backup.ps1" -ForegroundColor Gray
 Write-Host ""
 Write-Host "To uninstall: powershell -ExecutionPolicy Bypass -File uninstall.ps1" -ForegroundColor Gray
 Write-Host ""

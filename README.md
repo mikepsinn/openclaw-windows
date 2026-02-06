@@ -143,6 +143,20 @@ OpenClaw itself remains installed in WSL. To remove it:
 wsl -e bash -c "npm uninstall -g openclaw"
 ```
 
+## Config Backup
+
+Back up your `config.json` to a private GitHub repo:
+
+```powershell
+# Backup
+powershell -ExecutionPolicy Bypass -File backup.ps1
+
+# Restore on a new machine
+powershell -ExecutionPolicy Bypass -File backup.ps1 -Restore
+```
+
+Requires [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and authenticated.
+
 ## License
 
 MIT
