@@ -1,0 +1,14 @@
+# User config (installed copy)
+config.json
+
+# Logs
+*.log
+
+# PowerShell module cache
+PSModules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~

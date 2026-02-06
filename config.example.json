@@ -1,0 +1,19 @@
+{
+  "wslDistro": "Ubuntu",
+  "serviceName": "openclaw",
+  "servicePort": 18789,
+  "webUiUrl": "https://your-machine.taile3dff1.ts.net",
+  "npmPackage": "openclaw",
+  "npmPrefix": "/home/vagrant/.npm-global",
+  "checkIntervalSeconds": 60,
+  "autoRestart": true,
+  "autoRestartCooldownSeconds": 300,
+  "downtimeEscalationSeconds": 600,
+  "dailySummaryHour": 21,
+  "tokenJsonPath": "~/.openclaw/openclaw.json",
+  "tokenJsonKey": "gateway.auth.token",
+  "sessionDir": "~/.openclaw/agents/main/sessions",
+  "quickLinks": [
+    { "name": "Startup Folder", "path": "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup" }
+  ]
+}
