@@ -359,3 +359,4 @@ Write-Host "  4. Back up config: powershell -ExecutionPolicy Bypass -File backup
 Write-Host ""
 Write-Host "To uninstall: powershell -ExecutionPolicy Bypass -File uninstall.ps1" -ForegroundColor Gray
 Write-Host ""
+Read-Host "Press Enter to close this window"

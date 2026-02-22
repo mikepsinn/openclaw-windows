@@ -4,7 +4,7 @@
 
 #define MyAppName "OpenClaw Windows"
 #define MyAppPublisher "OpenClaw"
-#define MyAppURL "https://github.com/peterb/openclaw-windows"
+#define MyAppURL "https://github.com/mikepsinn/openclaw-windows"
 
 [Setup]
 AppId={{E8F1A3B7-5C2D-4F6E-9A1B-3D7C8E2F4A5B}
@@ -43,4 +43,4 @@ Name: "{group}\Reconfigure OpenClaw"; Filename: "powershell.exe"; Parameters: "-
 Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\install.ps1"""; Description: "Configure OpenClaw (sets up WSL, creates config)"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"" -Force"; Flags: runhidden waituntilterminated
+Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"" -Force"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallCleanup"
