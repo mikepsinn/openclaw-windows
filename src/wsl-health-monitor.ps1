@@ -1,6 +1,8 @@
 # WSL/OpenClaw Health Monitor - System Tray App
 # Config-driven persistent tray icon with status, context menu, auto-restart, and toast notifications
 
+$Host.UI.RawUI.WindowTitle = "OpenClaw Monitor"
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Import-Module BurntToast -ErrorAction SilentlyContinue
