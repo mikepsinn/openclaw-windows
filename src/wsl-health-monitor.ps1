@@ -153,7 +153,8 @@ function Send-RichToast {
                     $btButtons += New-BTButton -Content $btn.Label -DismissButton
                 }
                 "webui" {
-                    $btButtons += New-BTButton -Content $btn.Label -Arguments $webUiUrl -ActivationType Protocol
+                    $url = Get-WebUiUrlWithToken
+                    $btButtons += New-BTButton -Content $btn.Label -Arguments $url -ActivationType Protocol
                 }
             }
         }
@@ -255,6 +256,24 @@ if (`$content) {
 
 Register-ToastActions
 
+# --- Helper: build Web UI URL with auth token ---
+
+function Get-WebUiUrlWithToken {
+    if (-not $webUiUrl) { return $null }
+    if ($tokenJsonPath) {
+        $jqFilter = ".$tokenJsonKey // empty"
+        $token = wsl.exe -d $distro -e bash -c "cat $tokenJsonPath 2>/dev/null | jq -r '$jqFilter'"
+        if ($token) {
+            $t = $token.Trim()
+            if ($t) {
+                $sep = if ($webUiUrl -match '\?') { '&' } else { '?' }
+                return "${webUiUrl}${sep}token=${t}"
+            }
+        }
+    }
+    return $webUiUrl
+}
+
 # --- Build tray icon and context menu ---
 
 $trayIcon = New-Object System.Windows.Forms.NotifyIcon
@@ -350,7 +369,8 @@ if ($webUiUrl) {
     $menuOpenUI = New-Object System.Windows.Forms.ToolStripMenuItem
     $menuOpenUI.Text = "Open Web UI"
     $menuOpenUI.Add_Click({
-        Start-Process $webUiUrl
+        $url = Get-WebUiUrlWithToken
+        Start-Process $url
     })
     $contextMenu.Items.Add($menuOpenUI) | Out-Null
 }
@@ -410,7 +430,8 @@ $trayIcon.ContextMenuStrip = $contextMenu
 # Double-click tray icon opens the web UI
 if ($webUiUrl) {
     $trayIcon.Add_DoubleClick({
-        Start-Process $webUiUrl
+        $url = Get-WebUiUrlWithToken
+        Start-Process $url
     })
 }
 

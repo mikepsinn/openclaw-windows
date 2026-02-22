@@ -7,6 +7,9 @@ config.json
 # PowerShell module cache
 PSModules/
 
+# Inno Setup output
+Output/
+
 # IDE
 .vscode/
 .idea/
