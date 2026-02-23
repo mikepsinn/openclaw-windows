@@ -20,6 +20,12 @@ jobs:
         id: version
         run: echo "VERSION=$("${{ github.ref_name }}".TrimStart('v'))" >> $env:GITHUB_OUTPUT
 
+      - name: Compile health monitor exe
+        run: |
+          Install-Module ps2exe -Force
+          New-Item -Path build -ItemType Directory -Force | Out-Null
+          Invoke-PS2EXE -InputFile src\wsl-health-monitor.ps1 -OutputFile build\OpenClawMonitor.exe -NoConsole -Title "OpenClaw Monitor" -Description "OpenClaw health monitor and system tray app" -Product "OpenClaw Windows" -Version ${{ steps.version.outputs.VERSION }}
+
       - name: Build installer
         run: |
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.version.outputs.VERSION }} installer.iss

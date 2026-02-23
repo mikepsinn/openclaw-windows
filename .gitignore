@@ -10,6 +10,9 @@ PSModules/
 # Inno Setup output
 Output/
 
+# ps2exe build output
+build/
+
 # IDE
 .vscode/
 .idea/

@@ -30,19 +30,25 @@ if (-not $Force) {
 Write-Host ""
 Write-Host "[1/5] Stopping running monitor..." -ForegroundColor Yellow
 
-$procs = Get-Process powershell, pwsh -ErrorAction SilentlyContinue |
+# Kill compiled exe monitor
+$exeProcs = Get-Process OpenClawMonitor -ErrorAction SilentlyContinue
+if ($exeProcs) {
+    $exeProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+    Write-Host "  Stopped OpenClawMonitor process(es)" -ForegroundColor Green
+} else {
+    Write-Host "  No running OpenClawMonitor found" -ForegroundColor Gray
+}
+
+# Also kill legacy powershell-based monitors
+$legacyProcs = Get-Process powershell, pwsh -ErrorAction SilentlyContinue |
     Where-Object {
         try {
-            $_.MainModule.FileName -and
-            (Get-WmiObject Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine -match "wsl-health-monitor"
+            (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine -match "wsl-health-monitor"
         } catch { $false }
     }
-
-if ($procs) {
-    $procs | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host "  Stopped health monitor process(es)" -ForegroundColor Green
-} else {
-    Write-Host "  No running monitor found" -ForegroundColor Gray
+if ($legacyProcs) {
+    $legacyProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+    Write-Host "  Stopped legacy health monitor process(es)" -ForegroundColor Green
 }
 
 # Also kill hidden WSL sleep infinity
@@ -54,7 +60,7 @@ Write-Host "  (WSL processes left running - use 'wsl --shutdown' to stop WSL)" -
 Write-Host ""
 Write-Host "[2/5] Removing startup files..." -ForegroundColor Yellow
 
-$startupFiles = @("start-wsl.bat", "start-wsl-hidden.vbs", "wsl-health-monitor.ps1")
+$startupFiles = @("OpenClawMonitor.exe", "start-wsl.bat", "start-wsl-hidden.vbs", "wsl-health-monitor.ps1")
 foreach ($f in $startupFiles) {
     $path = Join-Path $startupDir $f
     if (Test-Path $path) {

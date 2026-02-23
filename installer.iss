@@ -26,6 +26,7 @@ WizardStyle=modern
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
+Source: "build\OpenClawMonitor.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs
 Source: "actions\*"; DestDir: "{app}\actions"; Flags: ignoreversion recursesubdirs
 Source: "install.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -36,7 +37,7 @@ Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\OpenClaw Monitor"; Filename: "wscript.exe"; Parameters: "//nologo ""{app}\src\start-wsl-hidden.vbs"""; Comment: "Start the OpenClaw health monitor"
+Name: "{group}\OpenClaw Monitor"; Filename: "{app}\OpenClawMonitor.exe"; Comment: "Start the OpenClaw health monitor"
 Name: "{group}\Reconfigure OpenClaw"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\install.ps1"""; Comment: "Re-run the OpenClaw configuration wizard"
 
 [Run]

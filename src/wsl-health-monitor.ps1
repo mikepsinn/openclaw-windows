@@ -36,6 +36,9 @@ $tokenJsonPath      = $cfg.tokenJsonPath
 $tokenJsonKey       = $cfg.tokenJsonKey
 $sessionDir         = $cfg.sessionDir
 
+# Start WSL keep-alive (detached) so WSL doesn't idle-shutdown
+Start-Process wsl.exe -ArgumentList "-d", $distro, "--", "bash", "-c", "exec sleep infinity" -WindowStyle Hidden
+
 $logFile = "$configDir\health.log"
 $maxLogLines = 500
 $updateCheckInterval = 86400

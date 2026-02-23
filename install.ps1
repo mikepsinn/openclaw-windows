@@ -226,26 +226,33 @@ if (Test-Path $configFile) {
 Write-Host ""
 Write-Host "[6/10] Installing startup files..." -ForegroundColor Yellow
 
-# Backup existing scripts before overwriting
-$backupDir = "$installDir\backup"
-$existingScripts = @("start-wsl.bat", "start-wsl-hidden.vbs", "wsl-health-monitor.ps1")
-$hasExisting = $existingScripts | Where-Object { Test-Path (Join-Path $startupDir $_) }
-if ($hasExisting) {
-    if (-not (Test-Path $backupDir)) { New-Item -Path $backupDir -ItemType Directory -Force | Out-Null }
-    foreach ($f in $hasExisting) {
-        Copy-Item (Join-Path $startupDir $f) (Join-Path $backupDir $f) -Force
+# Remove legacy startup scripts (VBS/BAT/PS1 chain replaced by exe)
+$legacyStartupFiles = @("start-wsl.bat", "start-wsl-hidden.vbs", "wsl-health-monitor.ps1")
+foreach ($f in $legacyStartupFiles) {
+    $legacyPath = Join-Path $startupDir $f
+    if (Test-Path $legacyPath) {
+        Remove-Item $legacyPath -Force
+        Write-Host "  Removed legacy: $f" -ForegroundColor Gray
     }
-    Write-Host "  Backed up existing scripts to $backupDir" -ForegroundColor Gray
 }
 
-Copy-Item "$scriptRoot\src\start-wsl.bat" "$startupDir\start-wsl.bat" -Force
-Copy-Item "$scriptRoot\src\start-wsl-hidden.vbs" "$startupDir\start-wsl-hidden.vbs" -Force
-Copy-Item "$scriptRoot\src\wsl-health-monitor.ps1" "$startupDir\wsl-health-monitor.ps1" -Force
-
-Write-Host "  Copied to: $startupDir" -ForegroundColor Green
-Write-Host "    - start-wsl.bat" -ForegroundColor Gray
-Write-Host "    - start-wsl-hidden.vbs" -ForegroundColor Gray
-Write-Host "    - wsl-health-monitor.ps1" -ForegroundColor Gray
+# Copy compiled exe to Startup folder
+$exePath = "$scriptRoot\OpenClawMonitor.exe"
+if (-not (Test-Path $exePath)) {
+    # Fallback: try build subdirectory (local dev builds)
+    $exePath = "$scriptRoot\build\OpenClawMonitor.exe"
+}
+if (Test-Path $exePath) {
+    Copy-Item $exePath "$startupDir\OpenClawMonitor.exe" -Force
+    Write-Host "  Copied to: $startupDir" -ForegroundColor Green
+    Write-Host "    - OpenClawMonitor.exe" -ForegroundColor Gray
+} else {
+    Write-Host "  WARNING: OpenClawMonitor.exe not found, copying source scripts as fallback" -ForegroundColor Yellow
+    Copy-Item "$scriptRoot\src\start-wsl.bat" "$startupDir\start-wsl.bat" -Force
+    Copy-Item "$scriptRoot\src\start-wsl-hidden.vbs" "$startupDir\start-wsl-hidden.vbs" -Force
+    Copy-Item "$scriptRoot\src\wsl-health-monitor.ps1" "$startupDir\wsl-health-monitor.ps1" -Force
+    Write-Host "    - start-wsl.bat / start-wsl-hidden.vbs / wsl-health-monitor.ps1" -ForegroundColor Gray
+}
 
 # --- Step 7: Install action scripts ---
 
@@ -324,17 +331,27 @@ Write-Host ""
 Write-Host "[10/10] Starting OpenClaw monitor..." -ForegroundColor Yellow
 
 # Kill any running health monitor before starting fresh
+Get-Process OpenClawMonitor -ErrorAction SilentlyContinue | ForEach-Object {
+    Write-Host "  Stopping old health monitor (PID $($_.Id))..." -ForegroundColor Yellow
+    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+}
+# Also kill legacy powershell-based monitors
 Get-Process powershell, pwsh -ErrorAction SilentlyContinue | Where-Object {
     try {
         (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine -match "wsl-health-monitor"
     } catch { $false }
 } | ForEach-Object {
-    Write-Host "  Stopping old health monitor (PID $($_.Id))..." -ForegroundColor Yellow
+    Write-Host "  Stopping legacy health monitor (PID $($_.Id))..." -ForegroundColor Yellow
     Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
 }
 
-# Start the VBS launcher (starts WSL keep-alive + tray monitor)
-Start-Process wscript.exe -ArgumentList "//nologo `"$startupDir\start-wsl-hidden.vbs`""
+# Launch the compiled monitor exe (or fall back to VBS chain)
+$monitorExe = "$startupDir\OpenClawMonitor.exe"
+if (Test-Path $monitorExe) {
+    Start-Process $monitorExe
+} else {
+    Start-Process wscript.exe -ArgumentList "//nologo `"$startupDir\start-wsl-hidden.vbs`""
+}
 
 Write-Host "  Tray monitor launched (look for the icon in your system tray)" -ForegroundColor Green
 
