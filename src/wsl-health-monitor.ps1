@@ -3,6 +3,13 @@
 
 $Host.UI.RawUI.WindowTitle = "OpenClaw Monitor"
 
+# --- Single-instance guard (named mutex) ---
+$script:mutex = New-Object System.Threading.Mutex($false, "Global\OpenClawHealthMonitor")
+if (-not $script:mutex.WaitOne(0)) {
+    # Another instance is already running — exit silently
+    exit 0
+}
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Import-Module BurntToast -ErrorAction SilentlyContinue
@@ -36,8 +43,11 @@ $tokenJsonPath      = $cfg.tokenJsonPath
 $tokenJsonKey       = $cfg.tokenJsonKey
 $sessionDir         = $cfg.sessionDir
 
-# Start WSL keep-alive (detached) so WSL doesn't idle-shutdown
-Start-Process wsl.exe -ArgumentList "-d", $distro, "--", "bash", "-c", "exec sleep infinity" -WindowStyle Hidden
+# Start WSL keep-alive (detached) so WSL doesn't idle-shutdown — but only if one isn't already running
+$existingSleep = wsl.exe -d $distro -e bash -c "pgrep -x sleep >/dev/null 2>&1 && echo yes || echo no" 2>&1
+if ($existingSleep.Trim() -ne "yes") {
+    Start-Process wsl.exe -ArgumentList "-d", $distro, "--", "bash", "-c", "exec sleep infinity" -WindowStyle Hidden
+}
 
 $logFile = "$configDir\health.log"
 $maxLogLines = 500

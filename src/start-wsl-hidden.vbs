@@ -22,8 +22,12 @@ If objFSO.FileExists(configFile) Then
     End If
 End If
 
-' Keep WSL VM alive with a hidden sleep infinity
-objShell.Run "wsl.exe -d " & distro & " -- bash -c ""exec sleep infinity""", 0, False
+' Keep WSL VM alive with a hidden sleep infinity — but only if one isn't already running
+Dim sleepCheck
+sleepCheck = objShell.Exec("wsl.exe -d " & distro & " -e bash -c ""pgrep -x sleep >/dev/null 2>&1 && echo yes || echo no""").StdOut.ReadLine()
+If Trim(sleepCheck) <> "yes" Then
+    objShell.Run "wsl.exe -d " & distro & " -- bash -c ""exec sleep infinity""", 0, False
+End If
 
 ' Launch health monitor tray app (powershell -WindowStyle Hidden = no console window)
 Dim startupDir
